@@ -1,0 +1,5 @@
+{
+  "name": "RW Tips Remastered",
+  "description": "A high-performance sports betting tracker with real-time analytics, utilizing Firebase for data persistence and a modern glassmorphism UI.",
+  "requestFramePermissions": []
+}
