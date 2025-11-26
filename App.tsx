@@ -532,12 +532,26 @@ export default function App() {
       const units = profit / (unitValue || 1);
       const roi = totalStaked > 0 ? (profit / totalStaked) * 100 : 0;
       
+      // Calcular greens e reds por liga
+      let leagueGreens = 0;
+      let leagueReds = 0;
+      leagueBets.forEach(bet => {
+        const profit = calculateProfit(bet.stake, bet.odds, bet.resultado);
+        if (profit > 0) {
+          leagueGreens += (bet.resultado === 'meio-green' ? 0.5 : 1);
+        } else if (profit < 0) {
+          leagueReds += (bet.resultado === 'meio-red' ? 0.5 : 1);
+        }
+      });
+      
       return {
         name: league,
         betsCount,
         profit,
         units,
-        roi
+        roi,
+        greens: leagueGreens,
+        reds: leagueReds
       };
     }).sort((a, b) => b.units - a.units); // Sort by Units Descending
 
@@ -738,7 +752,7 @@ export default function App() {
             </div>
 
             {/* Summary Cards (Filtered) */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <SummaryCard 
                 title="Lucro (Período)" 
                 value={formatCurrency(stats.netBalance)} 
@@ -754,18 +768,25 @@ export default function App() {
                 icon={<Coins size={20} />}
               />
               <SummaryCard 
-                title="Melhor Liga" 
-                value={stats.bestLeague.name} 
+                title="Total de Apostas" 
+                value={filteredBets.length.toString()} 
                 type="neutral"
-                subValue={`${(stats.bestLeague.profit / (unitValue || 1)).toFixed(2)}u de Lucro`}
-                icon={<Trophy size={20} />}
+                subValue={`${stats.pending} Aguardando`}
+                icon={<FileText size={20} />}
               />
               <SummaryCard 
-                title="Melhor Mercado" 
-                value={stats.bestMarket.name} 
-                type="neutral"
-                subValue={`${(stats.bestMarket.profit / (unitValue || 1)).toFixed(2)}u de Lucro`}
-                icon={<Target size={20} />}
+                title="Greens" 
+                value={stats.greens.toFixed(1)} 
+                type="gain"
+                subValue={`${filteredBets.length > 0 ? ((stats.greens / (stats.greens + stats.reds)) * 100).toFixed(1) : 0}% Taxa`}
+                icon={<CheckCircle2 size={20} />}
+              />
+              <SummaryCard 
+                title="Reds" 
+                value={stats.reds.toFixed(1)} 
+                type="loss"
+                subValue={`${filteredBets.length > 0 ? ((stats.reds / (stats.greens + stats.reds)) * 100).toFixed(1) : 0}% Taxa`}
+                icon={<XCircle size={20} />}
               />
             </div>
 
@@ -809,6 +830,8 @@ export default function App() {
                         <tr className="text-xs text-slate-500 uppercase border-b border-slate-800">
                           <th className="py-3 px-2 font-medium">Liga</th>
                           <th className="py-3 px-2 font-medium text-center">Apostas</th>
+                          <th className="py-3 px-2 font-medium text-center">Greens</th>
+                          <th className="py-3 px-2 font-medium text-center">Reds</th>
                           <th className="py-3 px-2 font-medium text-right">Lucro (R$)</th>
                           <th className="py-3 px-2 font-medium text-right">Unidades</th>
                           <th className="py-3 px-2 font-medium text-right">ROI</th>
@@ -819,6 +842,8 @@ export default function App() {
                           <tr key={league.name} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
                             <td className="py-3 px-2 text-sm font-medium text-white">{league.name}</td>
                             <td className="py-3 px-2 text-sm text-slate-400 text-center">{league.betsCount}</td>
+                            <td className="py-3 px-2 text-sm text-primary text-center font-medium">{league.greens.toFixed(1)}</td>
+                            <td className="py-3 px-2 text-sm text-red-500 text-center font-medium">{league.reds.toFixed(1)}</td>
                             <td className={`py-3 px-2 text-sm font-mono text-right ${league.profit >= 0 ? 'text-primary' : 'text-red-500'}`}>
                               {formatCurrency(league.profit)}
                             </td>
@@ -832,7 +857,7 @@ export default function App() {
                         ))}
                         {stats.leagueStats.length === 0 && (
                           <tr>
-                            <td colSpan={5} className="py-8 text-center text-slate-500">
+                            <td colSpan={7} className="py-8 text-center text-slate-500">
                               Nenhuma aposta encontrada neste período.
                             </td>
                           </tr>
