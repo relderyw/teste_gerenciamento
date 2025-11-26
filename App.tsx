@@ -15,15 +15,15 @@ import { db } from './services/firebase';
 import { Bet, BetResult, ChartDataPoint, Market } from './types';
 import { SummaryCard } from './components/SummaryCard';
 import { BetChart } from './components/BetChart';
-import { 
-  Trophy, 
-  Wallet, 
-  Target, 
-  Plus, 
-  Trash2, 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
+import {
+  Trophy,
+  Wallet,
+  Target,
+  Plus,
+  Trash2,
+  CheckCircle2,
+  XCircle,
+  Clock,
   AlertCircle,
   LayoutDashboard,
   FileText,
@@ -33,7 +33,10 @@ import {
   Save,
   Calendar,
   Pencil,
-  X
+  ChevronDown,
+  ChevronUp,
+  X,
+  Copy
 } from 'lucide-react';
 
 const formatCurrency = (value: number) => {
@@ -82,8 +85,10 @@ const initialFormState = {
 export default function App() {
   // State
   const [activeTab, setActiveTab] = useState<'dashboard' | 'new-bet' | 'markets' | 'settings'>('dashboard');
+  const [isLeagueStatsOpen, setIsLeagueStatsOpen] = useState(false);
   const [bets, setBets] = useState<Bet[]>([]);
   const [markets, setMarkets] = useState<Market[]>([]);
+  const [marketCategories, setMarketCategories] = useState<string[]>(MARKET_CATEGORIES);
   const [loading, setLoading] = useState(true);
   
   // Date Filters
@@ -167,6 +172,27 @@ export default function App() {
       });
       
       setMarkets(fetchedMarkets);
+    });
+
+    return () => unsubscribe();
+  }, [isLoggedIn]);
+
+  // 4. Market Categories Listener (carrega do Firebase)
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const q = collection(db, 'categorias');
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedCategories = snapshot.docs.map(doc => doc.data().nome as string);
+      
+      if (fetchedCategories.length > 0) {
+        // Ordenar categorias alfabeticamente
+        fetchedCategories.sort((a, b) => a.localeCompare(b));
+        setMarketCategories(fetchedCategories);
+      } else {
+        // Usa as categorias padrão se não houver nada no Firebase
+        setMarketCategories(MARKET_CATEGORIES);
+      }
     });
 
     return () => unsubscribe();
@@ -265,6 +291,20 @@ export default function App() {
       resultado: bet.resultado
     });
     setEditingId(bet.id || null);
+    setActiveTab('new-bet');
+  };
+
+  const copyBet = (bet: Bet) => {
+    setFormData({
+      liga: bet.liga,
+      jogador1: bet.jogador1,
+      jogador2: bet.jogador2,
+      mercado: bet.mercado,
+      stake: bet.stake.toString(),
+      odds: bet.odds.toString(),
+      resultado: 'aguardando' as BetResult
+    });
+    setEditingId(null); // Não é edição, é uma nova aposta
     setActiveTab('new-bet');
   };
 
@@ -484,6 +524,23 @@ export default function App() {
       if (profit > bestMarket.profit) bestMarket = { name, profit };
     });
 
+    // Calculate Detailed League Stats
+    const leagueStats = Object.entries(leagueProfits).map(([league, profit]) => {
+      const leagueBets = sortedBets.filter(b => b.liga === league);
+      const betsCount = leagueBets.length;
+      const totalStaked = leagueBets.reduce((acc, b) => acc + b.stake, 0);
+      const units = profit / (unitValue || 1);
+      const roi = totalStaked > 0 ? (profit / totalStaked) * 100 : 0;
+      
+      return {
+        name: league,
+        betsCount,
+        profit,
+        units,
+        roi
+      };
+    }).sort((a, b) => b.units - a.units); // Sort by Units Descending
+
     return {
       totalGain,
       totalLoss,
@@ -496,32 +553,60 @@ export default function App() {
       netUnits,
       chartData,
       bestLeague,
-      bestMarket
+      bestMarket,
+      leagueStats
     };
   }, [filteredBets, unitValue, initialBankroll]);
 
   // Calculate Global Bankroll (Unfiltered)
   const globalBankroll = useMemo(() => {
     let balance = initialBankroll;
+    let totalProfit = 0;
+    const allProfits: number[] = [];
+    
     bets.forEach(bet => {
-      balance += calculateProfit(bet.stake, bet.odds, bet.resultado);
+      const profit = calculateProfit(bet.stake, bet.odds, bet.resultado);
+      totalProfit += profit;
+      balance += profit;
+      allProfits.push(profit);
     });
+    
+    const debugData = {
+      initialBankroll,
+      totalProfit,
+      finalBalance: balance,
+      betsCount: bets.length,
+      allProfits: allProfits,
+      sumCheck: allProfits.reduce((a, b) => a + b, 0)
+    };
+    
+    (window as any).lastDebug = debugData;
+    console.log('DEBUG Bankroll:', debugData);
+    console.log('Soma manual dos lucros:', allProfits.reduce((a, b) => a + b, 0));
+    console.log('Todos os lucros:', allProfits);
+    
     return balance;
   }, [bets, initialBankroll]);
 
   // Group markets by category for selects
   const groupedMarkets = useMemo(() => {
     const groups: Record<string, Market[]> = {};
-    MARKET_CATEGORIES.forEach(cat => groups[cat] = []);
-    groups['OUTROS'] = [];
+    marketCategories.forEach(cat => groups[cat] = []);
+    if (!groups['OUTROS']) groups['OUTROS'] = [];
 
     markets.forEach(m => {
       const cat = m.categoria || 'OUTROS';
       if (!groups[cat]) groups[cat] = [];
       groups[cat].push(m);
     });
+    
+    // Ordenar mercados alfabeticamente dentro de cada categoria
+    Object.keys(groups).forEach(category => {
+      groups[category].sort((a, b) => a.nome.localeCompare(b.nome));
+    });
+    
     return groups;
-  }, [markets]);
+  }, [markets, marketCategories]);
 
   // --- Render Login ---
   if (!isLoggedIn) {
@@ -684,6 +769,81 @@ export default function App() {
               />
             </div>
 
+            {/* Expandable League Stats Section */}
+            <div className="bg-surface border border-slate-800 rounded-xl overflow-hidden transition-all duration-300">
+              <button 
+                onClick={() => setIsLeagueStatsOpen(!isLeagueStatsOpen)}
+                className="w-full flex items-center justify-between p-4 bg-slate-900/50 hover:bg-slate-900 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Trophy size={20} className="text-primary" />
+                  <span className="font-display font-bold text-lg text-white">Desempenho por Liga</span>
+                </div>
+                {isLeagueStatsOpen ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
+              </button>
+
+              {isLeagueStatsOpen && (
+                <div className="p-4 border-t border-slate-800 animate-in slide-in-from-top-2">
+                  {/* Date Filters inside the section as requested */}
+                  <div className="flex items-center gap-2 mb-6 bg-black/40 p-3 rounded-lg border border-slate-800 w-fit">
+                    <Calendar size={16} className="text-slate-500" />
+                    <span className="text-xs text-slate-400 uppercase font-bold mr-2">Período:</span>
+                    <input 
+                      type="date" 
+                      value={startDate} 
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="bg-transparent text-sm text-white focus:outline-none w-32 [color-scheme:dark]"
+                    />
+                    <span className="text-slate-600">-</span>
+                    <input 
+                      type="date" 
+                      value={endDate} 
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="bg-transparent text-sm text-white focus:outline-none w-32 [color-scheme:dark]"
+                    />
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="text-xs text-slate-500 uppercase border-b border-slate-800">
+                          <th className="py-3 px-2 font-medium">Liga</th>
+                          <th className="py-3 px-2 font-medium text-center">Apostas</th>
+                          <th className="py-3 px-2 font-medium text-right">Lucro (R$)</th>
+                          <th className="py-3 px-2 font-medium text-right">Unidades</th>
+                          <th className="py-3 px-2 font-medium text-right">ROI</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stats.leagueStats.map((league) => (
+                          <tr key={league.name} className="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
+                            <td className="py-3 px-2 text-sm font-medium text-white">{league.name}</td>
+                            <td className="py-3 px-2 text-sm text-slate-400 text-center">{league.betsCount}</td>
+                            <td className={`py-3 px-2 text-sm font-mono text-right ${league.profit >= 0 ? 'text-primary' : 'text-red-500'}`}>
+                              {formatCurrency(league.profit)}
+                            </td>
+                            <td className={`py-3 px-2 text-sm font-mono text-right ${league.units >= 0 ? 'text-primary' : 'text-red-500'}`}>
+                              {league.units > 0 ? '+' : ''}{league.units.toFixed(2)}u
+                            </td>
+                            <td className={`py-3 px-2 text-sm font-mono text-right ${league.roi >= 0 ? 'text-primary' : 'text-red-500'}`}>
+                              {league.roi.toFixed(1)}%
+                            </td>
+                          </tr>
+                        ))}
+                        {stats.leagueStats.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="py-8 text-center text-slate-500">
+                              Nenhuma aposta encontrada neste período.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Chart (Filtered) */}
             <div className="space-y-2">
               <h2 className="text-lg font-display font-bold text-slate-200 pl-1 flex items-center justify-between">
@@ -766,6 +926,18 @@ export default function App() {
                             onClick={(e) => { 
                               e.preventDefault(); 
                               e.stopPropagation(); 
+                              copyBet(bet); 
+                            }}
+                            className="p-1.5 text-slate-500 hover:text-blue-400 hover:bg-slate-800 rounded-md transition-all"
+                            title="Copiar Aposta"
+                          >
+                            <Copy size={14} />
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={(e) => { 
+                              e.preventDefault(); 
+                              e.stopPropagation(); 
                               startEditing(bet); 
                             }}
                             className="p-1.5 text-slate-500 hover:text-primary hover:bg-slate-800 rounded-md transition-all"
@@ -839,7 +1011,7 @@ export default function App() {
                         onChange={(e) => setFormData({...formData, mercado: e.target.value})}
                      >
                        <option value="">Selecione...</option>
-                       {MARKET_CATEGORIES.map(category => {
+                       {marketCategories.map(category => {
                          const categoryMarkets = groupedMarkets[category];
                          if (!categoryMarkets || categoryMarkets.length === 0) return null;
                          return (
@@ -1067,7 +1239,7 @@ export default function App() {
                     value={newMarketCategory}
                     onChange={(e) => setNewMarketCategory(e.target.value)}
                   >
-                    {MARKET_CATEGORIES.map(cat => (
+                    {marketCategories.map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
                     ))}
                   </select>
