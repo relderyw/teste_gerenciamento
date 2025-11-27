@@ -13,6 +13,16 @@ export interface Bet {
   resultado: BetResult;
   userEmail: string;
   timestamp: Timestamp | Date | any; // Handling Firebase timestamp nuances
+  bankrollId?: string; // ID do gerenciamento
+}
+
+export interface Bankroll {
+  id?: string;
+  name: string;
+  initialCapital: number;
+  unitValue: number;
+  userEmail: string;
+  isDefault?: boolean;
 }
 
 export interface Market {
@@ -21,6 +31,7 @@ export interface Market {
   categoria: string; // Nova propriedade
   userEmail: string;
   timestamp?: any;
+  hidden?: boolean;
 }
 
 export interface ChartDataPoint {
