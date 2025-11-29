@@ -12,8 +12,8 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, subValue
   const getColors = () => {
     switch (type) {
       case 'gain':
-        // Updated shadow to rgba(155, 234, 13, 0.15) for #9bea0d
-        return 'border-primary/30 bg-primary/5 text-primary shadow-[0_0_15px_rgba(155,234,13,0.15)]';
+        // Updated shadow to rgba(21, 213, 78, 0.15) for #15d54e
+        return 'border-primary/30 bg-primary/5 text-primary shadow-[0_0_15px_rgba(21,213,78,0.15)]';
       case 'loss':
         return 'border-red-500/30 bg-red-500/5 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.1)]';
       case 'neutral':

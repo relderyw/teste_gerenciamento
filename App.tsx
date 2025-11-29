@@ -825,7 +825,7 @@ export default function App() {
         <div className="w-full max-w-md bg-surface border border-slate-800 p-8 rounded-2xl shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent"></div>
           <div className="flex justify-center mb-6">
-            <img src="https://sensorfifa.com.br/assets/logo_sensorbet_1763385125916-J89V1wBF.png" alt="SensorBet Logo" className="h-16 object-contain" />
+            <img src="https://i.ibb.co/G4Y8sHMk/Chat-GPT-Image-21-de-abr-de-2025-16-14-34-1.png" alt="SensorBet Logo" className="h-16 object-contain" />
           </div>
           <p className="text-slate-400 text-center mb-8 font-light">Controle de Apostas</p>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -839,7 +839,7 @@ export default function App() {
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
               />
             </div>
-            <button type="submit" className="w-full bg-primary hover:bg-lime-400 text-black font-bold py-3 rounded-lg transition-transform active:scale-95 shadow-[0_0_20px_rgba(155,234,13,0.3)]">
+            <button type="submit" className="w-full bg-primary hover:bg-[#1aef5c] text-black font-bold py-3 rounded-lg transition-transform active:scale-95 shadow-[0_0_20px_rgba(21,213,78,0.3)]">
               Entrar no Sistema
             </button>
           </form>
@@ -855,7 +855,7 @@ export default function App() {
       <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-lg border-b border-slate-900">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="https://sensorfifa.com.br/assets/logo_sensorbet_1763385125916-J89V1wBF.png" alt="SensorBet Logo" className="h-10 object-contain" />
+            <img src="https://i.ibb.co/G4Y8sHMk/Chat-GPT-Image-21-de-abr-de-2025-16-14-34-1.png" alt="SensorBet Logo" className="h-10 object-contain" />
             
             {/* Bankroll Selector */}
             <div className="relative ml-4">
@@ -1446,7 +1446,7 @@ export default function App() {
                    </div>
                  )}
 
-                 <button type="submit" className="w-full bg-primary hover:bg-lime-400 text-black font-bold py-4 rounded-xl text-lg transition-transform active:scale-[0.98] shadow-[0_0_20px_rgba(155,234,13,0.4)] mt-4">
+                 <button type="submit" className="w-full bg-primary hover:bg-[#1aef5c] text-black font-bold py-4 rounded-xl text-lg transition-transform active:scale-[0.98] shadow-[0_0_20px_rgba(21,213,78,0.4)] mt-4">
                    {editingId ? 'Atualizar Aposta' : 'Confirmar Aposta'}
                  </button>
                </form>
